@@ -11,3 +11,10 @@ pytest
 ```
 pytest --cov=nrdtech_aws_utils tests/
 ```
+
+## Build
+```
+python -m pip install --upgrade pip
+pip install flit
+flit build
+```
