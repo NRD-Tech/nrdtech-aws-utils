@@ -1,6 +1,7 @@
+from datetime import datetime
 import os
 from itertools import islice
-from typing import Iterator
+from typing import Any, Iterator, Optional
 
 from boto3.dynamodb.conditions import Key, ConditionBase
 from boto3.dynamodb.types import TypeDeserializer
@@ -29,7 +30,24 @@ class DynamodbTable:
         return table_name
 
     def put_item(self, item: dict):
-        self._table.put_item(Item=item)
+        item_converted = self._convert_datetime_to_string(item)
+        self._table.put_item(Item=item_converted)
+
+    @staticmethod
+    def _convert_datetime_to_string(item):
+        """
+        Recursively convert all datetime objects in a dictionary to ISO 8601 formatted strings.
+        """
+        if isinstance(item, dict):
+            return {
+                k: DynamodbTable._convert_datetime_to_string(v) for k, v in item.items()
+            }
+        elif isinstance(item, list):
+            return [DynamodbTable._convert_datetime_to_string(v) for v in item]
+        elif isinstance(item, datetime):
+            return item.isoformat()
+        else:
+            return item
 
     def put_items(self, items: list):
         chunk_size = 25
@@ -42,7 +60,8 @@ class DynamodbTable:
 
             with self._table.batch_writer() as batch:
                 for item in chunk:
-                    batch.put_item(Item=item)
+                    item_converted = self._convert_datetime_to_string(item)
+                    batch.put_item(Item=item_converted)
 
     def get_item_with_id_and_sub_id(self, id, sub_id) -> dict | None:
         response = self._table.query(
@@ -59,7 +78,7 @@ class DynamodbTable:
         )
         return response.get("Items", [])
 
-    def get_items_with_id(self, id, index_name: str = None) -> list:
+    def get_items_with_id(self, id, index_name: Optional[str] = None) -> list:
         if index_name:
             response = self._table.query(
                 IndexName=index_name,
@@ -87,7 +106,7 @@ class DynamodbTable:
             key[self._secondary_key] = sort_key
         self._table.delete_item(Key=key)
 
-    def scan(self, filter_expression: ConditionBase) -> Iterator[dict[str, any]]:
+    def scan(self, filter_expression: ConditionBase) -> Iterator[dict[str, Any]]:
         response = self._table.scan(FilterExpression=filter_expression)
 
         for item in response.get("Items", []):

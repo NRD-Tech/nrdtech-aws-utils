@@ -29,7 +29,6 @@
 			  "ms-python.python",
 			  "ms-python.black-formatter",
 			  "tamasfe.even-better-toml",
-			  "AmazonWebServices.aws-toolkit-vscode",
 			  "HashiCorp.terraform",
 			  "ms-azuretools.vscode-docker"
 		    ],
